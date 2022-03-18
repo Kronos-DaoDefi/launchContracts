@@ -1,7 +1,15 @@
+/**
+ *Submitted for verification at BscScan.com on 2022-03-16
+*/
+
+/**
+ *Submitted for verification at BscScan.com on 2022-03-15
+*/
+
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.0;
 
+// OpenZeppelin Contracts (last updated v4.5.0) (token/ERC20/IERC20.sol)
 
 pragma solidity ^0.8.0;
 
@@ -20,13 +28,13 @@ interface IERC20 {
     function balanceOf(address account) external view returns (uint256);
 
     /**
-     * @dev Moves `amount` tokens from the caller's account to `recipient`.
+     * @dev Moves `amount` tokens from the caller's account to `to`.
      *
      * Returns a boolean value indicating whether the operation succeeded.
      *
      * Emits a {Transfer} event.
      */
-    function transfer(address recipient, uint256 amount) external returns (bool);
+    function transfer(address to, uint256 amount) external returns (bool);
 
     /**
      * @dev Returns the remaining number of tokens that `spender` will be
@@ -54,7 +62,7 @@ interface IERC20 {
     function approve(address spender, uint256 amount) external returns (bool);
 
     /**
-     * @dev Moves `amount` tokens from `sender` to `recipient` using the
+     * @dev Moves `amount` tokens from `from` to `to` using the
      * allowance mechanism. `amount` is then deducted from the caller's
      * allowance.
      *
@@ -63,8 +71,8 @@ interface IERC20 {
      * Emits a {Transfer} event.
      */
     function transferFrom(
-        address sender,
-        address recipient,
+        address from,
+        address to,
         uint256 amount
     ) external returns (bool);
 
@@ -82,6 +90,14 @@ interface IERC20 {
      */
     event Approval(address indexed owner, address indexed spender, uint256 value);
 }
+
+// File: https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/extensions/IERC20Metadata.sol
+
+
+// OpenZeppelin Contracts v4.4.1 (token/ERC20/extensions/IERC20Metadata.sol)
+
+pragma solidity ^0.8.0;
+
 
 /**
  * @dev Interface for the optional metadata functions from the ERC20 standard.
@@ -105,9 +121,10 @@ interface IERC20Metadata is IERC20 {
     function decimals() external view returns (uint8);
 }
 
+// File: https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/utils/Context.sol
 
 
-
+// OpenZeppelin Contracts v4.4.1 (utils/Context.sol)
 
 pragma solidity ^0.8.0;
 
@@ -130,7 +147,15 @@ abstract contract Context {
         return msg.data;
     }
 }
+
+// File: https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/ERC20.sol
+
+
+// OpenZeppelin Contracts (last updated v4.5.0) (token/ERC20/ERC20.sol)
+
 pragma solidity ^0.8.0;
+
+
 
 
 /**
@@ -233,11 +258,12 @@ contract ERC20 is Context, IERC20, IERC20Metadata {
      *
      * Requirements:
      *
-     * - `recipient` cannot be the zero address.
+     * - `to` cannot be the zero address.
      * - the caller must have a balance of at least `amount`.
      */
-    function transfer(address recipient, uint256 amount) public virtual override returns (bool) {
-        _transfer(_msgSender(), recipient, amount);
+    function transfer(address to, uint256 amount) public virtual override returns (bool) {
+        address owner = _msgSender();
+        _transfer(owner, to, amount);
         return true;
     }
 
@@ -251,12 +277,16 @@ contract ERC20 is Context, IERC20, IERC20Metadata {
     /**
      * @dev See {IERC20-approve}.
      *
+     * NOTE: If `amount` is the maximum `uint256`, the allowance is not updated on
+     * `transferFrom`. This is semantically equivalent to an infinite approval.
+     *
      * Requirements:
      *
      * - `spender` cannot be the zero address.
      */
     function approve(address spender, uint256 amount) public virtual override returns (bool) {
-        _approve(_msgSender(), spender, amount);
+        address owner = _msgSender();
+        _approve(owner, spender, amount);
         return true;
     }
 
@@ -266,26 +296,24 @@ contract ERC20 is Context, IERC20, IERC20Metadata {
      * Emits an {Approval} event indicating the updated allowance. This is not
      * required by the EIP. See the note at the beginning of {ERC20}.
      *
+     * NOTE: Does not update the allowance if the current allowance
+     * is the maximum `uint256`.
+     *
      * Requirements:
      *
-     * - `sender` and `recipient` cannot be the zero address.
-     * - `sender` must have a balance of at least `amount`.
-     * - the caller must have allowance for ``sender``'s tokens of at least
+     * - `from` and `to` cannot be the zero address.
+     * - `from` must have a balance of at least `amount`.
+     * - the caller must have allowance for ``from``'s tokens of at least
      * `amount`.
      */
     function transferFrom(
-        address sender,
-        address recipient,
+        address from,
+        address to,
         uint256 amount
     ) public virtual override returns (bool) {
-        _transfer(sender, recipient, amount);
-
-        uint256 currentAllowance = _allowances[sender][_msgSender()];
-        require(currentAllowance >= amount, "ERC20: transfer amount exceeds allowance");
-        unchecked {
-            _approve(sender, _msgSender(), currentAllowance - amount);
-        }
-
+        address spender = _msgSender();
+        _spendAllowance(from, spender, amount);
+        _transfer(from, to, amount);
         return true;
     }
 
@@ -302,7 +330,8 @@ contract ERC20 is Context, IERC20, IERC20Metadata {
      * - `spender` cannot be the zero address.
      */
     function increaseAllowance(address spender, uint256 addedValue) public virtual returns (bool) {
-        _approve(_msgSender(), spender, _allowances[_msgSender()][spender] + addedValue);
+        address owner = _msgSender();
+        _approve(owner, spender, allowance(owner, spender) + addedValue);
         return true;
     }
 
@@ -321,10 +350,11 @@ contract ERC20 is Context, IERC20, IERC20Metadata {
      * `subtractedValue`.
      */
     function decreaseAllowance(address spender, uint256 subtractedValue) public virtual returns (bool) {
-        uint256 currentAllowance = _allowances[_msgSender()][spender];
+        address owner = _msgSender();
+        uint256 currentAllowance = allowance(owner, spender);
         require(currentAllowance >= subtractedValue, "ERC20: decreased allowance below zero");
         unchecked {
-            _approve(_msgSender(), spender, currentAllowance - subtractedValue);
+            _approve(owner, spender, currentAllowance - subtractedValue);
         }
 
         return true;
@@ -340,30 +370,30 @@ contract ERC20 is Context, IERC20, IERC20Metadata {
      *
      * Requirements:
      *
-     * - `sender` cannot be the zero address.
-     * - `recipient` cannot be the zero address.
-     * - `sender` must have a balance of at least `amount`.
+     * - `from` cannot be the zero address.
+     * - `to` cannot be the zero address.
+     * - `from` must have a balance of at least `amount`.
      */
     function _transfer(
-        address sender,
-        address recipient,
+        address from,
+        address to,
         uint256 amount
     ) internal virtual {
-        require(sender != address(0), "ERC20: transfer from the zero address");
-        require(recipient != address(0), "ERC20: transfer to the zero address");
+        require(from != address(0), "ERC20: transfer from the zero address");
+        require(to != address(0), "ERC20: transfer to the zero address");
 
-        _beforeTokenTransfer(sender, recipient, amount);
+        _beforeTokenTransfer(from, to, amount);
 
-        uint256 senderBalance = _balances[sender];
-        require(senderBalance >= amount, "ERC20: transfer amount exceeds balance");
+        uint256 fromBalance = _balances[from];
+        require(fromBalance >= amount, "ERC20: transfer amount exceeds balance");
         unchecked {
-            _balances[sender] = senderBalance - amount;
+            _balances[from] = fromBalance - amount;
         }
-        _balances[recipient] += amount;
+        _balances[to] += amount;
 
-        emit Transfer(sender, recipient, amount);
+        emit Transfer(from, to, amount);
 
-        _afterTokenTransfer(sender, recipient, amount);
+        _afterTokenTransfer(from, to, amount);
     }
 
     /** @dev Creates `amount` tokens and assigns them to `account`, increasing
@@ -441,6 +471,28 @@ contract ERC20 is Context, IERC20, IERC20Metadata {
     }
 
     /**
+     * @dev Updates `owner` s allowance for `spender` based on spent `amount`.
+     *
+     * Does not update the allowance amount in case of infinite allowance.
+     * Revert if not enough allowance is available.
+     *
+     * Might emit an {Approval} event.
+     */
+    function _spendAllowance(
+        address owner,
+        address spender,
+        uint256 amount
+    ) internal virtual {
+        uint256 currentAllowance = allowance(owner, spender);
+        if (currentAllowance != type(uint256).max) {
+            require(currentAllowance >= amount, "ERC20: insufficient allowance");
+            unchecked {
+                _approve(owner, spender, currentAllowance - amount);
+            }
+        }
+    }
+
+    /**
      * @dev Hook that is called before any transfer of tokens. This includes
      * minting and burning.
      *
@@ -481,12 +533,12 @@ contract ERC20 is Context, IERC20, IERC20Metadata {
     ) internal virtual {}
 }
 
+// File: https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/access/Ownable.sol
 
 
-
+// OpenZeppelin Contracts v4.4.1 (access/Ownable.sol)
 
 pragma solidity ^0.8.0;
-
 
 
 /**
@@ -510,7 +562,7 @@ abstract contract Ownable is Context {
      * @dev Initializes the contract setting the deployer as the initial owner.
      */
     constructor() {
-        _setOwner(_msgSender());
+        _transferOwnership(_msgSender());
     }
 
     /**
@@ -536,7 +588,7 @@ abstract contract Ownable is Context {
      * thereby removing any functionality that is only available to the owner.
      */
     function renounceOwnership() public virtual onlyOwner {
-        _setOwner(address(0));
+        _transferOwnership(address(0));
     }
 
     /**
@@ -545,308 +597,44 @@ abstract contract Ownable is Context {
      */
     function transferOwnership(address newOwner) public virtual onlyOwner {
         require(newOwner != address(0), "Ownable: new owner is the zero address");
-        _setOwner(newOwner);
+        _transferOwnership(newOwner);
     }
 
-    function _setOwner(address newOwner) private {
+    /**
+     * @dev Transfers ownership of the contract to a new account (`newOwner`).
+     * Internal function without access restriction.
+     */
+    function _transferOwnership(address newOwner) internal virtual {
         address oldOwner = _owner;
         _owner = newOwner;
         emit OwnershipTransferred(oldOwner, newOwner);
     }
 }
 
-pragma solidity 0.8.5;
+// File: contracts/1_Storage.sol
+
+
+pragma solidity >=0.7.0 <0.9.0;
 
 
 
-//NRT is like a private stock
-//can only be traded with the issuer who remains in control of the market
-//until he opens the redemption window
-contract NRT is Ownable {
-    uint256 private _issuedSupply;
-    uint256 private _outstandingSupply;
-    uint256 private _decimals;
-    string private _symbol;
+contract KronosDao is ERC20, Ownable{
 
-    mapping(address => uint256) private _balances;
 
-    event Issued(address account, uint256 amount);
-    event Redeemed(address account, uint256 amount);
+ 
+    constructor() ERC20("KronosDao","KRONOS"){
 
-    constructor(string memory __symbol, uint256 __decimals) {
-        _symbol = __symbol;
-        _decimals = __decimals;
-        _issuedSupply = 0;
-        _outstandingSupply = 0;
     }
 
-    // Creates amount NRT and assigns them to account
-    function issue(address account, uint256 amount) public onlyOwner {
-        require(account != address(0), "zero address");
 
-        _issuedSupply += amount;
-        _outstandingSupply += amount;
-        _balances[account] += amount;
-
-        emit Issued(account, amount);
+    function decimals() public view virtual override returns (uint8) {
+        return 9;
     }
-
-    //redeem, caller handles transfer of created value
-    function redeem(address account, uint256 amount) public onlyOwner {
-        require(account != address(0), "zero address");
-        require(_balances[account] >= amount, "Insufficent balance");
-
-        _balances[account] -= amount;
-        _outstandingSupply -= amount;
-
-        emit Redeemed(account, amount);
-    }
-
-    function balanceOf(address account) public view returns (uint256) {
-        return _balances[account];
-    }
-
-    function symbol() public view returns (string memory) {
-        return _symbol;
-    }
-
-    function decimals() public view returns (uint256) {
-        return _decimals;
-    }
-
-    function issuedSupply() public view returns (uint256) {
-        return _issuedSupply;
-    }
-
-    function outstandingSupply() public view returns (uint256) {
-        return _outstandingSupply;
-    }
-}
-
-
-pragma solidity 0.8.5;
-
-
-// *********************************
-// Fair Launch pool
-// *********************************
-// cap increases gradually over time
-// this allows a maximum number of participants and still fill the round
-
-contract KronosCommunityFairLaunchPool is Ownable {
     
-    // the token address the cash is raised in
-    // assume decimals is 18
-    address public investToken;
-    // the token to be launched
-    address public launchToken;
-    // proceeds go to treasury
-    address public treasury;
-    // the certificate
-    NRT public nrt;
-    uint256 public price; 
-    // the cap at the beginning
-    uint256 public initialCap;
-    // maximum cap
-    uint256 public maxCap;
-    // the total amount in stables to be raised
-    uint256 public totalraiseCap;
-    // how much was raised
-    uint256 public totalraised;
-    // how much was issued
-    uint256 public totalissued;
-    // how much was redeemed
-    uint256 public totalredeem;
-    // start of the sale
-    uint256 public startTime;
-    // total duration
-    uint256 public duration;
-    // length of each epoch
-    uint256 public epochTime;
-    // end of the sale    
-    uint256 public endTime;
-    // sale has started
-    bool public saleEnabled;
-    // redeem is possible
-    bool public redeemEnabled;
-    // minimum amount
-    uint256 public mininvest;
-    uint256 public launchDecimals = 9; 
-    //
-    uint256 public numWhitelisted = 0;
-    //
-    uint256 public numInvested = 0;
-    
-    event SaleEnabled(bool enabled, uint256 time);
-    event RedeemEnabled(bool enabled, uint256 time);
-    event Invest(address investor, uint256 amount);
-    event Redeem(address investor, uint256 amount);
-
-    struct InvestorInfo {
-        uint256 amountInvested; // Amount deposited by user
-        bool claimed; 
-    }
-
-    // user is whitelisted
-    mapping(address => bool) public whitelisted;
-
-    mapping(address => InvestorInfo) public investorInfoMap;
-    
-    constructor(
-        address _investToken,
-        uint256 _startTime,  
-        uint256 _duration,  
-        uint256 _epochTime,
-        uint256 _initialCap,     
-        uint256 _totalraiseCap,
-        uint256 _minInvest,
-        address _treasury,
-        uint256 _price        
-    ) {
-        investToken = _investToken;
-        startTime = _startTime;
-        duration = _duration;
-        epochTime = _epochTime;
-        initialCap = _initialCap;        
-        totalraiseCap = _totalraiseCap;
-        mininvest = _minInvest; 
-        treasury = _treasury;
-        price = _price;
-        require(duration < 7 days, "duration too long");
-        endTime = startTime + duration;
-        nrt = new NRT("aKronos", 9);
-        redeemEnabled = false;
-        saleEnabled = false;
-        maxCap = 4000 * 10 ** 6;
-    }
-
-    // adds an address to the whitelist
-    function addWhitelist(address _address) external onlyOwner {
-        // require(!saleEnabled, "sale has already started");
-        //require(!whitelisted[_address], "already whitelisted");
-        whitelisted[_address] = true;
-        numWhitelisted+=1; 
-    }
-
-    // adds multiple addresses
-    function addMultipleWhitelist(address[] calldata _addresses) external onlyOwner {
-        require(!saleEnabled, "sale has already started");
-        require(_addresses.length <= 1000, "too many addresses");
-        for (uint256 i = 0; i < _addresses.length; i++) {
-            whitelisted[_addresses[i]] = true;  
-            numWhitelisted+=1;          
-        }
-    }
-
-    // removes a single address from the sale
-    function removeWhitelist(address _address) external onlyOwner {
-        require(!saleEnabled, "sale has already started");
-        whitelisted[_address] = false;
-    }
-
-    function currentEpoch() public view returns (uint256){                
-        return (block.timestamp - startTime)/epochTime;
-    }
-
-   
-    // invest up to current cap
-    function invest(uint256 investAmount) public {
-        require(block.timestamp >= startTime, "not started yet");
-        require(saleEnabled, "not enabled yet");
-        require(whitelisted[msg.sender] == true, 'msg.sender is not whitelisted');
-        require(totalraised + investAmount <= totalraiseCap, "over total raise");
-        require(investAmount >= mininvest, "below minimum invest");
 
 
-        InvestorInfo storage investor = investorInfoMap[msg.sender];
+    function mint(address account, uint256 amount ) public onlyOwner{
 
-
-        require(
-            ERC20(investToken).transferFrom(
-                msg.sender,
-                address(this),
-                investAmount
-            ),
-            "transfer failed"
-        );
-
-        
-        uint256 issueAmount =(investAmount*1e9)/price;
-
-        nrt.issue(msg.sender, issueAmount);
-
-        totalraised += investAmount;
-        totalissued += issueAmount;
-        if (investor.amountInvested == 0){
-            numInvested += 1;
-        }
-        investor.amountInvested += investAmount;
-        
-        emit Invest(msg.sender, investAmount);
-    }
-
-    // redeem all tokens
-    function redeem() public {        
-        require(redeemEnabled, "redeem not enabled");
-        //require(block.timestamp > endTime, "not redeemable yet");
-        uint256 redeemAmount = nrt.balanceOf(msg.sender);
-        require(redeemAmount > 0, "no amount issued");
-        InvestorInfo storage investor = investorInfoMap[msg.sender];
-        require(!investor.claimed, "already claimed");
-        require(
-            ERC20(launchToken).transfer(
-                msg.sender,
-                redeemAmount
-            ),
-            "transfer failed"
-        );
-
-        nrt.redeem(msg.sender, redeemAmount);
-
-        totalredeem += redeemAmount;        
-        emit Redeem(msg.sender, redeemAmount);
-        investor.claimed = true;
-    }
-
-    // -- admin functions --
-
-    // define the launch token to be redeemed
-    function setLaunchToken(address _launchToken) public onlyOwner {
-        launchToken = _launchToken;
-    }
-
-    function depositLaunchtoken(uint256 amount) public onlyOwner {
-        require(
-            ERC20(launchToken).transferFrom(msg.sender, address(this), amount),
-            "transfer failed"
-        );
-    }
-
-    // withdraw in case some tokens were not redeemed
-    function withdrawLaunchtoken(uint256 amount) public onlyOwner {
-        require(
-            ERC20(launchToken).transfer(msg.sender, amount),
-            "transfer failed"
-        );
-    }
-
-    // withdraw funds to treasury
-    function withdrawTreasury(uint256 amount) public onlyOwner {
-        //uint256 b = ERC20(investToken).balanceOf(address(this));
-        require(
-            ERC20(investToken).transfer(treasury, amount),
-            "transfer failed"
-        );
-    }
-
-    function enableSale() public onlyOwner {
-        saleEnabled = true;
-        emit SaleEnabled(true, block.timestamp);
-    }
-
-    function enableRedeem() public onlyOwner { 
-        require(launchToken != address(0), "launch token not set");
-        redeemEnabled = true;
-        emit RedeemEnabled(true, block.timestamp);
+        _mint(account,amount);
     }
 }

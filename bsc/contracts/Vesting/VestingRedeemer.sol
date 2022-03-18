@@ -1,6 +1,3 @@
-/**
- *Submitted for verification at snowtrace.io on 2022-01-02
-*/
 
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.7.5;
@@ -1097,8 +1094,8 @@ contract VestingRedeemer is OwnableBase {
         IKronosStaking(stakingContract).unstake(_amount, true);
     }
 
-    function remainingToWithdraw() public view returns (uint256 amount) {
-        uint256 nrtAmount = nrt.balanceOf(msg.sender);
+    function remainingToWithdraw(address user) public view returns (uint256 amount) {
+        uint256 nrtAmount = nrt.balanceOf(user);
         uint256 kronosAmount = convertNRTToKronos(nrtAmount);
         amount = kronosAmount.mul(IsKronos(stakingToken).index()).div(1e9);
     }
